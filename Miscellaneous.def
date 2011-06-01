@@ -1,0 +1,15 @@
+LIBRARY Miscellaneous
+
+EXPORTS
+	GetModuleFileWithExtension	@1
+	ReportError					@2
+	LogInitialize				@3
+	LogDebugMessageW			@4
+	LogDebugMessageA			@5
+	RemoveWhiteSpaceW			@6
+	RemoveWhiteSpaceA			@7
+	DebugProfileMonitor			@8
+
+	ExecuteOnce					@9
+	CleanupMutex				@10
+
