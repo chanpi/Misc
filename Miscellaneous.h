@@ -26,10 +26,13 @@ extern "C" {
 	// 設定ファイルを読み込み、ログレベルを設定する。
 	// 読み込みに失敗した場合や、本関数を呼び出さなかった場合は、Log_Errorレベルに設定する。
 	// mainなどで最初に一度だけ呼び出すのがよい。
-	DLL_EXPORT void LogInitialize(LOG_LEVEL logLevel);
+	DLL_EXPORT BOOL LogFileOpenW(PCSTR szTitle, LOG_LEVEL logLevel);
+	DLL_EXPORT BOOL LogFileCloseW();
+	DLL_EXPORT BOOL LogFileOpenA(PCSTR szTitle, LOG_LEVEL logLevel);
+	DLL_EXPORT BOOL LogFileCloseA();
 
-	DLL_EXPORT void LogDebugMessageW(LOG_LEVEL logLevel, PCWSTR szMessage);
-	DLL_EXPORT void LogDebugMessageA(LOG_LEVEL logLevel, PCSTR szMessage);
+	DLL_EXPORT BOOL LogDebugMessageW(LOG_LEVEL logLevel, PCWSTR szMessage);
+	DLL_EXPORT BOOL LogDebugMessageA(LOG_LEVEL logLevel, PCSTR szMessage);
 
 	// 先頭末尾のスペースを除く。
 	DLL_EXPORT void RemoveWhiteSpaceW(PWSTR szBuffer);
