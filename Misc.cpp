@@ -294,7 +294,7 @@ void RemoveWhiteSpaceW(PWSTR szBuffer)
 	WORD wCharType = 0;
 
 	while (pStart < pEnd && GetStringTypeEx(LOCALE_USER_DEFAULT, CT_CTYPE1, pStart, 1, &wCharType)) {
-		if (wCharType & C1_SPACE) {
+		if (wCharType & C1_SPACE || wCharType & C1_CNTRL) {
 			pStart++;
 		} else {
 			break;
@@ -302,7 +302,7 @@ void RemoveWhiteSpaceW(PWSTR szBuffer)
 	}
 
 	while (pStart < pEnd && GetStringTypeEx(LOCALE_USER_DEFAULT, CT_CTYPE1, pEnd, 1, &wCharType)) {
-		if (wCharType & C1_SPACE) {
+		if (wCharType & C1_SPACE || wCharType & C1_CNTRL) {
 			pEnd--;
 		} else {
 			break;
@@ -320,7 +320,7 @@ void RemoveWhiteSpaceA(PSTR szBuffer)
 	WORD wCharType = 0;
 
 	while (pStart < pEnd && GetStringTypeExA(LOCALE_USER_DEFAULT, CT_CTYPE1, pStart, 1, &wCharType)) {
-		if (wCharType & C1_SPACE) {
+		if (wCharType & C1_SPACE || wCharType & C1_CNTRL) {
 			pStart++;
 		} else {
 			break;
@@ -328,7 +328,7 @@ void RemoveWhiteSpaceA(PSTR szBuffer)
 	}
 
 	while (pStart < pEnd && GetStringTypeExA(LOCALE_USER_DEFAULT, CT_CTYPE1, pEnd, 1, &wCharType)) {
-		if (wCharType & C1_SPACE) {
+		if (wCharType & C1_SPACE || wCharType & C1_CNTRL) {
 			pEnd--;
 		} else {
 			break;
