@@ -28,14 +28,14 @@ static HANDLE g_hFileLockA = NULL;
 static LARGE_INTEGER g_liPrev = {0};
 static LARGE_INTEGER g_liNow = {0};
 
-static BOOL LogDebugMessageW(LOG_LEVEL logLevel, PCWSTR szMessage);
-static BOOL LogDebugMessageA(LOG_LEVEL logLevel, PCSTR szMessage);
-static BOOL PrepareLogFile(PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension, PCSTR szTitle);
-static BOOL CompareDate(struct tm* lastDate, const struct tm* date);
-static BOOL GetCurrentTimeForLogW(LOG_LEVEL logLevel, PTSTR szTime, SIZE_T cchLength);
-static BOOL GetCurrentTimeForLogA(LOG_LEVEL logLevel, PSTR szTime, SIZE_T cchLength);
-static void CreateLogMessageW(LPWSTR destMessage, int length, LPCWSTR srcMessage, DWORD dwErrorCode, LPCWSTR szFILE, int line);
-static void CreateLogMessageA(LPSTR destMessage, int length, LPCSTR srcMessage, DWORD dwErrorCode, LPCSTR szFILE, int line);
+static BOOL WINAPI LogDebugMessageW(LOG_LEVEL logLevel, PCWSTR szMessage);
+static BOOL WINAPI LogDebugMessageA(LOG_LEVEL logLevel, PCSTR szMessage);
+static BOOL WINAPI PrepareLogFile(PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension, PCSTR szTitle);
+static BOOL WINAPI CompareDate(struct tm* lastDate, const struct tm* date);
+static BOOL WINAPI GetCurrentTimeForLogW(LOG_LEVEL logLevel, PTSTR szTime, SIZE_T cchLength);
+static BOOL WINAPI GetCurrentTimeForLogA(LOG_LEVEL logLevel, PSTR szTime, SIZE_T cchLength);
+static void WINAPI CreateLogMessageW(LPWSTR destMessage, int length, LPCWSTR srcMessage, DWORD dwErrorCode, LPCWSTR szFILE, int line);
+static void WINAPI CreateLogMessageA(LPSTR destMessage, int length, LPCSTR srcMessage, DWORD dwErrorCode, LPCSTR szFILE, int line);
 
 
 #if defined UNICODE || _UNICODE
@@ -48,7 +48,7 @@ static void CreateLogMessageA(LPSTR destMessage, int length, LPCSTR srcMessage, 
 #define CreateLogMessage CreateLogMessageA
 #endif
 
-BOOL CreateFileMutex(HANDLE* phMutex, LPCTSTR szAppName)
+BOOL WINAPI CreateFileMutex(HANDLE* phMutex, LPCTSTR szAppName)
 {
 	*phMutex = OpenMutex(MUTEX_ALL_ACCESS, FALSE, szAppName);
 	if (*phMutex) {
@@ -64,7 +64,7 @@ BOOL CreateFileMutex(HANDLE* phMutex, LPCTSTR szAppName)
 	return TRUE;
 }
 
-void CleanupFileMutex(HANDLE hMutex)
+void WINAPI CleanupFileMutex(HANDLE hMutex)
 {
 	if (hMutex != NULL) {
 		CloseHandle(hMutex);
@@ -72,7 +72,7 @@ void CleanupFileMutex(HANDLE hMutex)
 	}
 }
 
-BOOL ExecuteOnce(LPCTSTR szAppName)
+BOOL WINAPI ExecuteOnce(LPCTSTR szAppName)
 {
 	g_hMutex = CreateMutex(NULL, TRUE, szAppName);
 	if (g_hMutex == NULL) {
@@ -84,7 +84,7 @@ BOOL ExecuteOnce(LPCTSTR szAppName)
 	return TRUE;
 }
 
-void CleanupMutex()
+void WINAPI CleanupMutex()
 {
 	if (g_hMutex != NULL) {
 		CloseHandle(g_hMutex);
@@ -92,7 +92,7 @@ void CleanupMutex()
 	}
 }
 
-BOOL GetModuleFileWithExtension(PTSTR szFilePath, SIZE_T cchLength, PCTSTR szExtension) {
+BOOL WINAPI GetModuleFileWithExtension(PTSTR szFilePath, SIZE_T cchLength, PCTSTR szExtension) {
 	TCHAR* ptr = NULL;
 	if (!GetModuleFileName(NULL, szFilePath, cchLength)) {
 		ReportError(_T(MISC_MESSAGE_ERROR_GETMODULEFILENAME));
@@ -105,11 +105,11 @@ BOOL GetModuleFileWithExtension(PTSTR szFilePath, SIZE_T cchLength, PCTSTR szExt
 	return FALSE;
 }
 
-void ReportError(PCTSTR szMessage) {
+void WINAPI ReportError(PCTSTR szMessage) {
 	MessageBox(NULL, szMessage, szTitle, MB_OK | MB_ICONERROR);
 }
 
-BOOL PrepareLogFile(PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension, PCSTR szTitle)
+BOOL WINAPI PrepareLogFile(PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension, PCSTR szTitle)
 {
 	if (!PathIsDirectory(szLogDir)) {
 		if (!CreateDirectory(szLogDir, NULL)) {
@@ -129,7 +129,7 @@ BOOL PrepareLogFile(PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension, PCSTR
 	return TRUE;
 }
 
-BOOL LogFileOpenW(PCSTR szTitle, LOG_LEVEL logLevel)
+BOOL WINAPI LogFileOpenW(PCSTR szTitle, LOG_LEVEL logLevel)
 {
 	TCHAR szLogFileName[BUFFER_SIZE];
 	unsigned char szBOM[] = { 0xFF, 0xFE };
@@ -162,7 +162,7 @@ BOOL LogFileOpenW(PCSTR szTitle, LOG_LEVEL logLevel)
 	return TRUE;
 }
 
-BOOL LogFileOpenA(PCSTR szTitle, LOG_LEVEL logLevel)
+BOOL WINAPI LogFileOpenA(PCSTR szTitle, LOG_LEVEL logLevel)
 {
 	TCHAR szLogFileName[BUFFER_SIZE] = {0};
 
@@ -191,7 +191,7 @@ BOOL LogFileOpenA(PCSTR szTitle, LOG_LEVEL logLevel)
 	return TRUE;
 }
 
-BOOL LogFileCloseW()
+BOOL WINAPI LogFileCloseW()
 {
 	if (g_hFileHandleW != NULL) {
 		if (!CloseHandle(g_hFileHandleW)) {
@@ -206,7 +206,7 @@ BOOL LogFileCloseW()
 	return TRUE;
 }
 
-BOOL LogFileCloseA()
+BOOL WINAPI LogFileCloseA()
 {
 	if (g_hFileHandleA != NULL) {
 		if (!CloseHandle(g_hFileHandleA)) {
@@ -221,7 +221,7 @@ BOOL LogFileCloseA()
 	return TRUE;
 }
 
-BOOL LogDebugMessageW(LOG_LEVEL logLevel, PCWSTR szMessage)
+BOOL WINAPI LogDebugMessageW(LOG_LEVEL logLevel, PCWSTR szMessage)
 {
 	if (g_logLevel <= logLevel) {
 		if (g_hFileHandleW == NULL) {
@@ -254,7 +254,7 @@ BOOL LogDebugMessageW(LOG_LEVEL logLevel, PCWSTR szMessage)
 	return TRUE;
 }
 
-BOOL LogDebugMessageA(LOG_LEVEL logLevel, PCSTR szMessage)
+BOOL WINAPI LogDebugMessageA(LOG_LEVEL logLevel, PCSTR szMessage)
 {
 	if (g_logLevel <= logLevel) {
 		if (g_hFileHandleA == NULL) {
@@ -287,7 +287,7 @@ BOOL LogDebugMessageA(LOG_LEVEL logLevel, PCSTR szMessage)
 	return TRUE;
 }
 
-void RemoveWhiteSpaceW(PWSTR szBuffer)
+void WINAPI RemoveWhiteSpaceW(PWSTR szBuffer)
 {
 	WCHAR* pStart = szBuffer;
 	WCHAR* pEnd = szBuffer + wcslen(szBuffer) - 1;
@@ -313,7 +313,7 @@ void RemoveWhiteSpaceW(PWSTR szBuffer)
 	*(szBuffer + (pEnd - pStart + 1)) = L'\0';
 }
 
-void RemoveWhiteSpaceA(PSTR szBuffer)
+void WINAPI RemoveWhiteSpaceA(PSTR szBuffer)
 {
 	char* pStart = szBuffer;
 	char* pEnd = szBuffer + strlen(szBuffer) - 1;
@@ -339,7 +339,7 @@ void RemoveWhiteSpaceA(PSTR szBuffer)
 	*(szBuffer + (pEnd - pStart + 1)) = '\0';
 }
 
-void DebugProfileMonitor(PCSTR position) {
+void WINAPI DebugProfileMonitor(PCSTR position) {
 	if (g_logLevel < Log_Info) {
 		return;
 	}
@@ -357,7 +357,7 @@ void DebugProfileMonitor(PCSTR position) {
 	g_liPrev = g_liNow;
 }
 
-void CreateLogMessageA(LPSTR destMessage, int length, LPCSTR srcMessage, DWORD dwErrorCode, LPCSTR szFILE, int line)
+void WINAPI CreateLogMessageA(LPSTR destMessage, int length, LPCSTR srcMessage, DWORD dwErrorCode, LPCSTR szFILE, int line)
 {
 	CHAR szFileName[MAX_PATH] = {0};
 	CHAR szExt[8] = {0};
@@ -365,14 +365,14 @@ void CreateLogMessageA(LPSTR destMessage, int length, LPCSTR srcMessage, DWORD d
 	sprintf_s(destMessage, length, "%s <%s%s:line(%d) errorcode(%d)>", srcMessage, szFileName, szExt, line, dwErrorCode);
 }
 
-void LoggingMessageA(LOG_LEVEL logLevel, LPCSTR srcMessage,  DWORD dwErrorCode, LPCSTR szFILE, int line)
+void WINAPI LoggingMessageA(LOG_LEVEL logLevel, LPCSTR srcMessage,  DWORD dwErrorCode, LPCSTR szFILE, int line)
 {
 	CHAR szError[BUFFER_SIZE] = {0};
 	CreateLogMessageA(szError, _countof(szError), srcMessage, dwErrorCode, szFILE, line);
 	LogDebugMessageA(logLevel, szError);
 }
 
-void CreateLogMessageW(LPWSTR destMessage, int length, LPCWSTR srcMessage, DWORD dwErrorCode, LPCWSTR szFILE, int line)
+void WINAPI CreateLogMessageW(LPWSTR destMessage, int length, LPCWSTR srcMessage, DWORD dwErrorCode, LPCWSTR szFILE, int line)
 {
 	TCHAR szFileName[MAX_PATH] = {0};
 	TCHAR szExt[8] = {0};
@@ -380,7 +380,7 @@ void CreateLogMessageW(LPWSTR destMessage, int length, LPCWSTR srcMessage, DWORD
 	swprintf_s(destMessage, length, L"%s <%s%s:line(%d) error(%d)>", srcMessage, szFileName, szExt, line, dwErrorCode);
 }
 
-void LoggingMessageW(LOG_LEVEL logLevel, LPCWSTR srcMessage,  DWORD dwErrorCode, LPCWSTR szFILE, int line)
+void WINAPI LoggingMessageW(LOG_LEVEL logLevel, LPCWSTR srcMessage,  DWORD dwErrorCode, LPCWSTR szFILE, int line)
 {
 	WCHAR szError[BUFFER_SIZE] = {0};
 	CreateLogMessageW(szError, _countof(szError), srcMessage, dwErrorCode, szFILE, line);
@@ -407,7 +407,7 @@ inline PCSTR GetLogLevelString(LOG_LEVEL logLevel) {
 	return szLogLevel;
 }
 
-static BOOL CompareDate(struct tm* lastDate, const struct tm* date)
+static BOOL WINAPI CompareDate(struct tm* lastDate, const struct tm* date)
 {
 	BOOL ret = TRUE;
 	if (lastDate->tm_year != 0 &&
@@ -422,7 +422,7 @@ static BOOL CompareDate(struct tm* lastDate, const struct tm* date)
 }
 
 // 前回と日付が異なっている場合はFALSEを返します。
-BOOL GetCurrentTimeForLogW(LOG_LEVEL logLevel, PWSTR szTime, SIZE_T cchLength)
+BOOL WINAPI GetCurrentTimeForLogW(LOG_LEVEL logLevel, PWSTR szTime, SIZE_T cchLength)
 {
 	time_t timer;
 	struct tm date = {0};
@@ -442,7 +442,7 @@ BOOL GetCurrentTimeForLogW(LOG_LEVEL logLevel, PWSTR szTime, SIZE_T cchLength)
 }
 
 // 前回と日付が異なっている場合はFALSEを返します。
-BOOL GetCurrentTimeForLogA(LOG_LEVEL logLevel, PSTR szTime, SIZE_T cchLength)
+BOOL WINAPI GetCurrentTimeForLogA(LOG_LEVEL logLevel, PSTR szTime, SIZE_T cchLength)
 {
 	time_t timer;
 	struct tm date = {0};
