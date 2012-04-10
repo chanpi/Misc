@@ -26,9 +26,9 @@ extern "C" {
 	// 設定ファイルを読み込み、ログレベルを設定する。
 	// 読み込みに失敗した場合や、本関数を呼び出さなかった場合は、Log_Errorレベルに設定する。
 	// mainなどで最初に一度だけ呼び出すのがよい。
-	DLL_EXPORT BOOL WINAPI LogFileOpenW(PCSTR szTitle, LOG_LEVEL logLevel);
+	DLL_EXPORT BOOL WINAPI LogFileOpenW(PCSTR szDirectory, PCSTR szTitle, LOG_LEVEL logLevel);
 	DLL_EXPORT BOOL WINAPI LogFileCloseW(void);
-	DLL_EXPORT BOOL WINAPI LogFileOpenA(PCSTR szTitle, LOG_LEVEL logLevel);
+	DLL_EXPORT BOOL WINAPI LogFileOpenA(PCSTR szDirectory, PCSTR szTitle, LOG_LEVEL logLevel);
 	DLL_EXPORT BOOL WINAPI LogFileCloseA(void);
 
 	// 先頭末尾のスペースを除く。

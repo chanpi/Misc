@@ -10,11 +10,12 @@
 
 #define BUFFER_SIZE		256
 
-static PCTSTR szTitle		= _T("Misc");
-static PCTSTR szLogDir		= _T("logs");
-static PCSTR szLogExt		= ".log";
+static PCTSTR g_szTitle		= _T("Misc");
+static PCSTR g_szLogExt		= ".log";
 static PCTSTR g_MutexNameA	= _T("Global\\LogFileOpenA");
 static PCTSTR g_MutexNameW	= _T("Global\\LogFileOpenW");
+static char g_szWDirectory[BUFFER_SIZE] = "";
+static char g_szADirectory[BUFFER_SIZE] = "";
 static char g_szWTitle[BUFFER_SIZE] = "";
 static char g_szATitle[BUFFER_SIZE] = "";
 static LOG_LEVEL g_logLevel	= Log_Error;
@@ -30,7 +31,7 @@ static LARGE_INTEGER g_liNow = {0};
 
 static BOOL WINAPI LogDebugMessageW(LOG_LEVEL logLevel, PCWSTR szMessage);
 static BOOL WINAPI LogDebugMessageA(LOG_LEVEL logLevel, PCSTR szMessage);
-static BOOL WINAPI PrepareLogFile(PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension, PCSTR szTitle);
+static BOOL WINAPI PrepareLogFile(PCSTR szDirectory, PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension, PCSTR szTitle);
 static BOOL WINAPI CompareDate(struct tm* lastDate, const struct tm* date);
 static BOOL WINAPI GetCurrentTimeForLogW(LOG_LEVEL logLevel, PTSTR szTime, SIZE_T cchLength);
 static BOOL WINAPI GetCurrentTimeForLogA(LOG_LEVEL logLevel, PSTR szTime, SIZE_T cchLength);
@@ -106,13 +107,15 @@ BOOL WINAPI GetModuleFileWithExtension(PTSTR szFilePath, SIZE_T cchLength, PCTST
 }
 
 void WINAPI ReportError(PCTSTR szMessage) {
-	MessageBox(NULL, szMessage, szTitle, MB_OK | MB_ICONERROR);
+	MessageBox(NULL, szMessage, g_szTitle, MB_OK | MB_ICONERROR);
 }
 
-BOOL WINAPI PrepareLogFile(PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension, PCSTR szTitle)
+BOOL WINAPI PrepareLogFile(PCSTR szDirectory, PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension, PCSTR szTitle)
 {
-	if (!PathIsDirectory(szLogDir)) {
-		if (!CreateDirectory(szLogDir, NULL)) {
+	CHAR szLogDirectory[BUFFER_SIZE] = {0};
+	sprintf_s(szLogDirectory, _countof(szLogDirectory), "%s\\logs", szDirectory);
+	if (!PathIsDirectoryA(szLogDirectory)) {
+		if (!CreateDirectoryA(szLogDirectory, NULL)) {
 			return FALSE;
 		}
 	}
@@ -123,13 +126,13 @@ BOOL WINAPI PrepareLogFile(PWSTR szFileName, SIZE_T cchLength, PCSTR szExtension
 
 	timer = time(NULL);
 	localtime_s(&date, &timer);
-	sprintf_s(buffer, _countof(buffer), "logs\\%s_%04d%02d%02d%s", szTitle, date.tm_year+1900, date.tm_mon+1, date.tm_mday, szExtension);
+	sprintf_s(buffer, _countof(buffer), "%s\\logs\\%s_%04d%02d%02d%s", szDirectory, szTitle, date.tm_year+1900, date.tm_mon+1, date.tm_mday, szExtension);
 
 	MultiByteToWideChar(CP_ACP, 0, buffer, -1, szFileName, cchLength);
 	return TRUE;
 }
 
-BOOL WINAPI LogFileOpenW(PCSTR szTitle, LOG_LEVEL logLevel)
+BOOL WINAPI LogFileOpenW(PCSTR szDirectory, PCSTR szTitle, LOG_LEVEL logLevel)
 {
 	TCHAR szLogFileName[BUFFER_SIZE];
 	unsigned char szBOM[] = { 0xFF, 0xFE };
@@ -137,7 +140,7 @@ BOOL WINAPI LogFileOpenW(PCSTR szTitle, LOG_LEVEL logLevel)
 
 	CreateFileMutex(&g_hFileLockW, g_MutexNameW);
 
-	if (!PrepareLogFile(szLogFileName, _countof(szLogFileName), szLogExt, szTitle)) {
+	if (!PrepareLogFile(szDirectory, szLogFileName, _countof(szLogFileName), g_szLogExt, szTitle)) {
 		ReportError(_T(MISC_MESSAGE_ERROR_CREATE_DIR));
 		return FALSE;
 	}
@@ -158,17 +161,18 @@ BOOL WINAPI LogFileOpenW(PCSTR szTitle, LOG_LEVEL logLevel)
 	ReleaseMutex(g_hFileLockW);
 
 	g_logLevel = logLevel;
+	strcpy_s(g_szWDirectory, _countof(g_szWDirectory), szDirectory);
 	strcpy_s(g_szWTitle, _countof(g_szWTitle), szTitle);
 	return TRUE;
 }
 
-BOOL WINAPI LogFileOpenA(PCSTR szTitle, LOG_LEVEL logLevel)
+BOOL WINAPI LogFileOpenA(PCSTR szDirectory, PCSTR szTitle, LOG_LEVEL logLevel)
 {
 	TCHAR szLogFileName[BUFFER_SIZE] = {0};
 
 	CreateFileMutex(&g_hFileLockA, g_MutexNameA);
 
-	if (!PrepareLogFile(szLogFileName, _countof(szLogFileName), szLogExt, szTitle)) {
+	if (!PrepareLogFile(szDirectory, szLogFileName, _countof(szLogFileName), g_szLogExt, szTitle)) {
 		ReportError(_T(MISC_MESSAGE_ERROR_CREATE_DIR));
 		return FALSE;
 	}
@@ -187,6 +191,7 @@ BOOL WINAPI LogFileOpenA(PCSTR szTitle, LOG_LEVEL logLevel)
 	ReleaseMutex(g_hFileLockA);
 
 	g_logLevel = logLevel;
+	strcpy_s(g_szADirectory, _countof(g_szADirectory), szDirectory);
 	strcpy_s(g_szATitle, _countof(g_szATitle), szTitle);
 	return TRUE;
 }
@@ -234,7 +239,7 @@ BOOL WINAPI LogDebugMessageW(LOG_LEVEL logLevel, PCWSTR szMessage)
 			if (!LogFileCloseW()) {
 				return FALSE;
 			}
-			if (!LogFileOpenW(g_szWTitle, g_logLevel)) {
+			if (!LogFileOpenW(g_szWDirectory, g_szWTitle, g_logLevel)) {
 				return FALSE;
 			}
 		}
@@ -267,7 +272,7 @@ BOOL WINAPI LogDebugMessageA(LOG_LEVEL logLevel, PCSTR szMessage)
 			if (!LogFileCloseA()) {
 				return FALSE;
 			}
-			if (!LogFileOpenA(g_szATitle, g_logLevel)) {
+			if (!LogFileOpenA(g_szADirectory, g_szATitle, g_logLevel)) {
 				return FALSE;
 			}
 		}
@@ -362,7 +367,7 @@ void WINAPI CreateLogMessageA(LPSTR destMessage, int length, LPCSTR srcMessage, 
 	CHAR szFileName[MAX_PATH] = {0};
 	CHAR szExt[8] = {0};
 	_splitpath_s(szFILE, NULL, 0, NULL, 0, szFileName, _countof(szFileName), szExt, _countof(szExt));
-	sprintf_s(destMessage, length, "%s <%s%s:line(%d) errorcode(%d)>", srcMessage, szFileName, szExt, line, dwErrorCode);
+	sprintf_s(destMessage, length, "%s <%s%s:line(%d) error(%u)>", srcMessage, szFileName, szExt, line, dwErrorCode);
 }
 
 void WINAPI LoggingMessageA(LOG_LEVEL logLevel, LPCSTR srcMessage,  DWORD dwErrorCode, LPCSTR szFILE, int line)
@@ -377,7 +382,7 @@ void WINAPI CreateLogMessageW(LPWSTR destMessage, int length, LPCWSTR srcMessage
 	TCHAR szFileName[MAX_PATH] = {0};
 	TCHAR szExt[8] = {0};
 	_wsplitpath_s(szFILE, NULL, 0, NULL, 0, szFileName, _countof(szFileName), szExt, _countof(szExt));
-	swprintf_s(destMessage, length, L"%s <%s%s:line(%d) error(%d)>", srcMessage, szFileName, szExt, line, dwErrorCode);
+	swprintf_s(destMessage, length, L"%s <%s%s:line(%d) error(%u)>", srcMessage, szFileName, szExt, line, dwErrorCode);
 }
 
 void WINAPI LoggingMessageW(LOG_LEVEL logLevel, LPCWSTR srcMessage,  DWORD dwErrorCode, LPCWSTR szFILE, int line)
@@ -444,7 +449,7 @@ BOOL WINAPI GetCurrentTimeForLogW(LOG_LEVEL logLevel, PWSTR szTime, SIZE_T cchLe
 // ëOâÒÇ∆ì˙ïtÇ™àŸÇ»Ç¡ÇƒÇ¢ÇÈèÍçáÇÕFALSEÇï‘ÇµÇ‹Ç∑ÅB
 BOOL WINAPI GetCurrentTimeForLogA(LOG_LEVEL logLevel, PSTR szTime, SIZE_T cchLength)
 {
-	time_t timer;
+	time_t timer = 0;
 	struct tm date = {0};
 	static struct tm lastDate = {0};
 
